@@ -1,28 +1,28 @@
 # Always-On Agents on the Microsoft Stack
 
-A guide for AI engineers building always-on agents with Microsoft Agent Framework, Microsoft Foundry, and Azure, based on Anthropic's always-on agent pattern.
+Anthropic's excellent article, [Building always-on agents][anthropic] by William Hu, inspired this repository. Published on November 13, 2026, it explains how agents can respond to events, follow up on tasks, and maintain context across sessions.
 
-**Availability snapshot: November 16, 2026.** Based on linked Microsoft documentation and announcements. GA status, SDK maturity, regional availability, and model capacity are separate considerations.
+**This repository helps AI engineers build always-on agents with Microsoft AI solutions.** It maps the pattern to Microsoft Agent Framework, Microsoft Foundry, and Azure, compares implementation options, and highlights GA versus preview features and UAE North availability.
 
-## Start with the article
+## What is an always-on agent?
 
-William Hu's [Building always-on agents][anthropic], published by Anthropic on November 13, 2026, describes agents that maintain continuity across sessions and act on events without waiting for a new user prompt.
+An always-on agent can act when something happens, not only when a user sends a prompt. A webhook, scheduled follow-up, background result, or user message can start its next run.
 
-**Always-on does not mean continuously running inference.** The agent usually sleeps. An event wakes it for a bounded run: restore the relevant context, reason and use tools, save progress, then sleep again. A session is the transcript of messages and tool calls; it can span multiple runs.
+**Always-on does not mean continuously running inference.** The agent wakes, loads context, reasons and uses tools, saves progress, then sleeps. A *run* is one stretch of work. A *session* holds messages and tool calls and can span several runs.
 
-The architecture around the agent has five primitives:
+Anthropic describes five building blocks:
 
 | Primitive | Responsibility |
 | --- | --- |
-| Event inbox | Durably accept events, deduplicate source IDs, track status, and batch related messages before processing. Start with one inbox per user and one active worker per inbox. |
-| Timers | Persist agent-requested follow-ups and recurring schedules. Due timers create inbox events rather than bypassing the inbox. |
-| Memory | Retain instructions, useful learned context, communication history, and task progress across runs. Prefer pointers to authoritative systems over copied records. |
-| Permissions | Enforce allowed actions, keep credentials outside the model's reach, and defer sensitive tool calls until an authorized person approves. |
-| Outbox | Separate deciding what to communicate from delivering it, with pacing and retry handling when needed. A run can also finish silently. |
+| Event inbox | Store incoming events reliably, deduplicate them, and batch related messages. |
+| Timers | Schedule follow-ups and recurring work. Due timers create inbox events. |
+| Memory | Retain useful context and task progress across runs. Link to existing records instead of copying them. |
+| Permissions | Control tool access and wait for approval before sensitive actions. |
+| Outbox | Queue outgoing messages for delivery, retries, and pacing. Not every run needs to send a message. |
 
-Memory curation from past sessions, called *dreaming* in the article, is optional. It is not a sixth required primitive.
+For example, a support agent can receive a case update, investigate it, request approval for a response, and follow up the next day. It does not need to keep a worker or model running while it waits.
 
-This repository offers an independent Microsoft-stack interpretation of the pattern, not a port of an Anthropic product or a claim that the pattern requires a particular model vendor.
+The article also describes optional memory curation, called *dreaming*: reviewing past sessions to improve stored memories.
 
 ## How the cycle fits together
 
@@ -45,35 +45,35 @@ flowchart LR
     User --> Inbox
 ```
 
-This conceptual diagram shows the five primitives working together. Approval requests also need a user-facing delivery path. While a task waits for approval, its worker should be free to process other work.
+Start with one inbox per user and one active worker per inbox. Deliver approval requests through the user interface or outbox; the user's decision returns as an event. Waiting for approval should release the worker.
 
-## Microsoft options
+## Choose an implementation approach
 
 ### A. Code-first: Agent Framework + Durable Functions
 
 **Best for custom agent logic and control over durable execution.**
 
-Microsoft Agent Framework supplies reasoning, tools, sessions, and tool-approval requests. Durable Functions supplies recoverable orchestration, timers, and waits for external events. The Durable Task extension can persist agent sessions, while Azure OpenAI supplies model inference.
+Use **Microsoft Agent Framework** for the agent loop, tools, sessions, and approval requests. Use **Durable Functions** for recoverable orchestration, timers, and external-event waits, and **Azure OpenAI** for model inference. The Durable Task extension adds persistent agent sessions.
 
-The application owns inbox deduplication and batching, long-term memory policy, tool authorization, approval UX, and reliable outbound effects.
+You implement inbox deduplication and batching, memory policies, tool authorization, the approval interface, and reliable delivery.
 
-Agent Framework can also run on Container Apps, App Service, or AKS. The Durable Task SDKs support bringing your own compute, so Azure Functions hosting is optional.
+For other hosting requirements, Agent Framework and the Durable Task SDKs can run on **Container Apps, App Service, or AKS**.
 
 ### B. Foundry-native: prompt or hosted agents + routines
 
 **Best for managed agent hosting and operations.**
 
-With **prompt agents**, configure instructions, models, and tools, and let Foundry run the agent. With **hosted agents**, deploy your own agent code into a managed runtime with persistent session files.
+Choose **prompt agents** to configure instructions, models, and tools without managing agent hosting code. Choose **hosted agents** to run your own code in a managed runtime with persistent session files.
 
-**Routines** invoke agents on schedules, at a future time, or for supported external events, and record dispatch results. Business deduplication, approvals, notification policy, and reliable external effects still need deliberate design. The built-in self-reminder tool and managed long-term memory remain preview.
+**Routines** invoke agents on schedules or supported external events. You still design business-level deduplication, approvals, memory, and outbound delivery. The built-in self-reminder tool and managed long-term memory are **preview**.
 
 ### C. Hybrid: Azure durability + a Foundry agent
 
 **Best for managed agents with explicit business-process control.**
 
-Azure owns the durable inbox, timer, approval, and delivery lifecycle. It invokes a Foundry agent for reasoning and tool use.
+Use Azure services for the inbox, timers, approvals, and delivery. Invoke a Foundry agent for reasoning and tool use.
 
-This is useful when Foundry routines are unavailable in the required region, including UAE North. The trade-off is coordinating session IDs, retries, task state, and asynchronous completion across two runtimes.
+This also works around regional gaps in Foundry routines, including UAE North. You need to coordinate session IDs, retries, task state, and completion across both runtimes.
 
 ### D. Integration and low-code: Logic Apps or Copilot Studio
 
@@ -81,11 +81,11 @@ This is useful when Foundry routines are unavailable in the required region, inc
 
 **Logic Apps Standard Agent Loop** combines agent reasoning with integration workflows and enterprise connectors. **Copilot Studio autonomous agents** provide low-code, event-driven business agents.
 
-Check feature-specific limits, identity, durable memory, approval behavior, and delivery guarantees. Copilot Studio's documented event-trigger path uses maker credentials.
+Check connector limits, authentication, memory, approvals, and delivery behavior. Copilot Studio's documented event-trigger path uses maker credentials.
 
 ## What is GA, and what is preview?
 
-GA applies to a specific capability, not everything under a product brand. A GA service can have preview tools or language integrations.
+**As of November 16, 2026**, based on the linked Microsoft documentation and announcements. A GA service can still include preview features or SDK integrations.
 
 | Capability | Documented status | Implication |
 | --- | --- | --- |
@@ -104,53 +104,59 @@ GA applies to a specific capability, not everything under a product brand. A GA 
 | Logic Apps Standard Agent Loop | **GA**, November 18, 2025 ([announcement][logic-ga]). | A credible integration-first option. Consumption agentic workflows and some advanced integrations remain preview ([documentation][logic-agents]). |
 | Copilot Studio autonomous agents | **GA**, March 2025 ([announcement][studio-ga]). | Event-driven low-code option; validate the specific harness, connectors, authentication, and environment policies ([limitations][studio-triggers]). |
 
-Stable `1.0.0` releases of both [`agent-framework-durabletask`][pypi-durable] and [`agent-framework-azurefunctions`][pypi-functions] were published November 9, 2026. Some Learn installation examples still include prerelease flags; pin and validate a coherent stable dependency set rather than copying a preview example blindly.
+The Python packages [`agent-framework-durabletask`][pypi-durable] and [`agent-framework-azurefunctions`][pypi-functions] have stable `1.0.0` releases. They are separate from the preview Python agent bindings. Pin compatible stable versions when building a GA-only solution.
 
-## Mapping the five primitives
+## Map the building blocks to Microsoft services
 
-These are options, not a requirement to deploy every listed service.
+Choose the services your application needs; you do not need every option below.
 
-| Primitive | Microsoft implementation options | Important boundary |
+| Building block | Microsoft options | Design consideration |
 | --- | --- | --- |
-| Inbox | An application event ledger in Azure SQL or another durable database; optionally Service Bus queues/sessions for transport and serialized processing. Foundry routines manage dispatch for supported triggers. | Broker deduplication is bounded and does not prevent consumer redelivery. A session lock does not by itself serialize an asynchronous agent task after the receiver releases it. |
-| Timers | Durable Functions timers and external events; Durable Task SDKs on other compute; supported Foundry routines; Logic Apps recurrence. | Persist a correlation to the task/session. Foundry's built-in agent-directed reminder tool is preview. |
-| Memory | Application-managed records or documents in Azure SQL, Cosmos DB, or Blob Storage; hosted-agent persistent files where appropriate. | Conversation history and orchestration checkpoints are not a complete cross-session memory policy. Define scope, retention, provenance, deletion, and concurrency. |
-| Permissions | Managed identity and Entra RBAC for service access; Key Vault for necessary secrets; controlled tool backends/proxies; Agent Framework [tool approvals][approvals] plus a durable approval workflow. | Model instructions and approval flags are not authorization boundaries. Authenticate the approver and bind the decision to the exact pending action and arguments. |
-| Outbox | An application outbox recorded with the related state change, dispatched by Functions or a worker; optional Service Bus/Logic Apps delivery integrations. | Delivery retries need idempotency or reconciliation at the destination. An outbox alone cannot guarantee exactly-once effects in an arbitrary external system. |
+| Inbox | Azure SQL or another durable database; Service Bus queues/sessions; Foundry routines for supported triggers. | Track event IDs and processing status. Broker deduplication does not prevent redelivery. |
+| Timers | Durable Functions timers, Durable Task SDKs, Foundry routines, or Logic Apps recurrence. | Associate each timer with its task/session. The Foundry self-reminder tool is preview. |
+| Memory | Azure SQL, Cosmos DB, Blob Storage, or hosted-agent persistent files. | Separate task state from long-term memory. Define scope, retention, and deletion. |
+| Permissions | Managed identity, Entra RBAC, Key Vault, controlled tool backends, and Agent Framework [tool approvals][approvals]. | Enforce authorization in code. Bind approval to the exact action and arguments. |
+| Outbox | A durable database outbox with a Functions or worker dispatcher; Service Bus or Logic Apps for delivery integrations. | Record outgoing work with the related state change. Make retries safe at the destination. |
 
-See Microsoft's [Idempotent Consumer pattern][idempotency] and [Service Bus reliability guidance][servicebus] for the distinction between duplicate-send filtering and idempotent business processing.
+An outbox alone does not guarantee exactly-once delivery to an external system. See Microsoft's [Idempotent Consumer pattern][idempotency] and [Service Bus reliability guidance][servicebus].
 
-## UAE North and enterprise constraints
+## UAE North availability
 
 **Snapshot: November 16, 2026.** Regional support does not establish subscription access, quota, or capacity.
 
 | Service or feature | UAE North status | Important constraint |
 | --- | --- | --- |
 | Foundry hosted agents | Listed as supported ([regions][hosted]). | Check the selected model, tools, and runtime features separately. |
-| Azure OpenAI Responses API | Listed as supported ([regions][responses]). | A particular model/version/deployment type and quota are not established by API availability. |
-| Foundry routines | **Not available** ([limitations][routines]). | Also excluded in UK West, Switzerland West, Japan West, and Norway East. Routines support VNet-secured projects but not customer-managed key encryption. |
+| Azure OpenAI Responses API | Listed as supported ([regions][responses]). | Check the model, version, deployment type, and quota separately. |
+| Foundry routines | **Not available** ([limitations][routines]). | Use Azure-managed scheduling and invocation instead. |
 | Foundry managed memory | Listed as supported, but **preview** ([limitations][memory]). | Memory stores do not support VNet integration. |
 | Durable Task Scheduler | Confirm through the resource provider ([documentation][dts]). | The documentation directs readers to query current regional availability before selecting the backend. |
 
 **Data residency:** a resource in UAE North does not guarantee UAE-only model processing. Global deployments may process elsewhere; select the deployment type against the required processing boundary ([deployment types][deployment-types]).
 
-Additional Foundry routine constraints matter for a faithful implementation:
+## Foundry routine constraints
 
-- Each routine has one trigger and one action; it invokes a prompt or hosted agent, not a workflow agent.
-- Documented external event sources are GitHub issues and Teams messages, not an arbitrary universal event bus.
-- Recurring schedules have a minimum five-minute interval.
-- Ordinary routines start new conversations; the preview reminder tool resumes the same conversation.
-- Successful dispatch is not proof that asynchronous agent work completed. The documented 30-second downstream timeout for Responses actions concerns background-request acceptance, not the agent's total execution time.
+| Constraint | What it means |
+| --- | --- |
+| One trigger and one action | Each routine invokes one prompt or hosted agent, not a workflow agent. |
+| Supported event sources | GitHub issues and Teams messages; other sources need a separate integration. |
+| Recurring schedule interval | At least five minutes. |
+| Conversation continuity | Ordinary routines start new conversations. The preview reminder tool resumes the same conversation. |
+| Network and encryption | VNet-secured projects are supported; customer-managed key encryption is not. |
+| Dispatch versus completion | A successful dispatch does not prove that asynchronous agent work finished. The 30-second Responses dispatch timeout covers background-request acceptance, not the entire run. |
 
 Sources: [routines][routines] and [reminder tool][reminders].
 
-## Choosing a GA-only architecture
+## Build with GA components
 
-**Microsoft Agent Framework + Durable Functions + Azure OpenAI** offers a code-first approach with explicit inbox, memory, approval, and outbox behavior. The GA Durable Task extension provides an option for session durability. Conventional agent calls inside durable activities are another option for a more explicit implementation.
+For a code-first solution, **Microsoft Agent Framework + Durable Functions + Azure OpenAI** is a practical starting point. Use the GA Durable Task extension for session durability, or invoke the agent from durable activities and manage session persistence explicitly.
 
-Keep model/network calls out of deterministic orchestration code. Recovery can reuse recorded results, but a crash between an external side effect and its checkpoint still requires idempotency. Configure waits so they release workers; that does not make storage, provisioned capacity, or every hosting plan free while idle.
-
-Do not require Foundry managed memory, the preview reminder tool, or preview Python agent bindings. Keep the model selectable rather than assume a specific model or provisioned capacity is available. Evaluate Scheduler Consumption versus Dedicated against cost and operational requirements, not only GA status.
+- Keep model and network calls outside deterministic orchestration code.
+- Make external actions safe to retry, including failures between execution and checkpointing.
+- Persist approvals and release workers while waiting.
+- Use application-managed memory and durable timers instead of preview memory and reminder features.
+- Choose a supported GA model with the required quota and data-processing boundary.
+- Compare Scheduler Consumption and Dedicated costs. Sleeping agents can still incur storage and provisioned-capacity charges.
 
 Recheck feature availability, support requirements, and regional constraints before deployment.
 
