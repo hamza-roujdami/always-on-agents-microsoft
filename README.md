@@ -1,4 +1,4 @@
-# Always-on agents on the Microsoft stack
+# Always-On Agents on the Microsoft Stack
 
 Understanding Anthropic's always-on agent pattern and exploring how to implement it with Microsoft Agent Framework, Microsoft Foundry, and Azure.
 
@@ -53,14 +53,39 @@ The diagram is conceptual, not a deployed architecture. Approval requests also n
 
 Foundry and Azure are not competing choices. Foundry provides models and managed agent capabilities on Azure; Azure services can supply the durable application infrastructure around them.
 
-| Approach | What it provides | What still needs application design | Best fit |
-| --- | --- | --- | --- |
-| **Code-first: Agent Framework + Durable Functions** | Agent reasoning and tools, durable orchestration, timers, external-event waits, and recoverable execution. The Durable Task extension can persist agent sessions. | Inbox identity/deduplication/batching, long-term memory policy, tool authorization, approval UX, and reliable outbound effects. | A small code reference that makes all five primitives visible. |
-| **Foundry-native: prompt or hosted agent + routines** | Managed agent execution, configured tools, scheduled/event-triggered invocations, and run records. Hosted agents support custom code and persistent session files. | Domain state, notification policy, business-action idempotency, and any inbox semantics not supplied by the selected runtime. Built-in reminders and managed long-term memory remain preview. | Managed agent operations where region and feature constraints fit. |
-| **Hybrid: Azure durability + Foundry agent** | Azure handles the durable event/timer/approval lifecycle; a Foundry agent performs reasoning and tool use. | Clear ownership of session IDs, retries, task state, and asynchronous completion across the two runtimes. | Managed agent hosting with custom business-process guarantees or unsupported routine regions. |
-| **Integration/low-code: Logic Apps or Copilot Studio** | Connectors, event-driven business automation, and agent capabilities with less custom hosting code. | Feature-specific limits, identity, durable memory, approval behavior, and delivery guarantees. | Business automation and connector-heavy customer environments. |
+### A. Code-first: Agent Framework + Durable Functions
+
+**Best for teaching the architecture through a small code example.**
+
+Microsoft Agent Framework supplies reasoning, tools, sessions, and tool-approval requests. Durable Functions supplies recoverable orchestration, timers, and waits for external events. The Durable Task extension can persist agent sessions, while Azure OpenAI supplies model inference.
+
+The application still owns inbox deduplication and batching, long-term memory policy, tool authorization, approval UX, and reliable outbound effects. This approach makes all five primitives visible instead of hiding them behind a managed service.
 
 Agent Framework can also run on Container Apps, App Service, or AKS. The Durable Task SDKs support bringing your own compute; adopting durable execution does not force Azure Functions hosting. This flexibility adds deployment choices, not a reason to provision more services for a small example.
+
+### B. Foundry-native: prompt or hosted agents + routines
+
+**Best for managed agent hosting and operations.**
+
+With **prompt agents**, configure instructions, models, and tools, and let Foundry run the agent. With **hosted agents**, deploy your own agent code into a managed runtime with persistent session files.
+
+**Routines** invoke agents on schedules, at a future time, or for supported external events, and record dispatch results. Business deduplication, approvals, notification policy, and reliable external effects still need deliberate design. The built-in self-reminder tool and managed long-term memory remain preview.
+
+### C. Hybrid: Azure durability + a Foundry agent
+
+**Best for managed agents with explicit business-process control.**
+
+Azure owns the durable inbox, timer, approval, and delivery lifecycle. It invokes a Foundry agent for reasoning and tool use.
+
+This is useful when Foundry routines are unavailable in the required region, including UAE North. The trade-off is coordinating session IDs, retries, task state, and asynchronous completion across two runtimes.
+
+### D. Integration and low-code: Logic Apps or Copilot Studio
+
+**Best for connector-heavy business automation.**
+
+**Logic Apps Standard Agent Loop** combines agent reasoning with integration workflows and enterprise connectors. **Copilot Studio autonomous agents** provide low-code, event-driven business agents.
+
+These are credible alternatives, but their feature-specific limits, identity, durable memory, approval behavior, and delivery guarantees still need review. In particular, Copilot Studio's documented event-trigger path uses maker credentials. A code-first reference is better suited to exposing the mechanics of all five primitives.
 
 ## What is GA, and what is preview?
 
@@ -101,12 +126,17 @@ See Microsoft's [Idempotent Consumer pattern][idempotency] and [Service Bus reli
 
 ## UAE North and enterprise constraints
 
-- **Foundry hosted agents:** UAE North appears in the [supported region list][hosted].
-- **Azure OpenAI Responses API:** UAE North appears in the [supported region list][responses]. This does not establish availability or quota for a particular model/version/deployment type.
-- **Foundry routines:** UAE North is explicitly excluded. Current exclusions also include UK West, Switzerland West, Japan West, and Norway East. Routines support VNet-secured projects but **not customer-managed key encryption** ([limitations][routines]).
-- **Foundry memory:** UAE North is listed, but the service is still preview and **does not support VNet integration for memory stores** ([limitations][memory]).
-- **Durable Task Scheduler:** documentation directs users to query the resource provider for current regional availability. Target-subscription availability and capacity have **not** been checked ([documentation][dts]).
-- **Data residency:** a resource in UAE North does not guarantee UAE-only model processing. Global deployments may process elsewhere; select the deployment type against the required processing boundary ([deployment types][deployment-types]).
+**Snapshot: November 16, 2026.** Regional support does not establish subscription access, quota, or capacity.
+
+| Service or feature | UAE North status | Important constraint |
+| --- | --- | --- |
+| Foundry hosted agents | Listed as supported ([regions][hosted]). | Check the selected model, tools, and runtime features separately. |
+| Azure OpenAI Responses API | Listed as supported ([regions][responses]). | A particular model/version/deployment type and quota are not established by API availability. |
+| Foundry routines | **Not available** ([limitations][routines]). | Also excluded in UK West, Switzerland West, Japan West, and Norway East. Routines support VNet-secured projects but not customer-managed key encryption. |
+| Foundry managed memory | Listed as supported, but **preview** ([limitations][memory]). | Memory stores do not support VNet integration. |
+| Durable Task Scheduler | **Not verified against a target subscription** ([documentation][dts]). | Query the resource provider for current regional availability before selecting the backend. |
+
+**Data residency:** a resource in UAE North does not guarantee UAE-only model processing. Global deployments may process elsewhere; select the deployment type against the required processing boundary ([deployment types][deployment-types]).
 
 Additional Foundry routine constraints matter for a faithful implementation:
 
