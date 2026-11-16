@@ -1,6 +1,6 @@
 # Always-On Agents on the Microsoft Stack
 
-Understanding Anthropic's always-on agent pattern and exploring how to implement it with Microsoft Agent Framework, Microsoft Foundry, and Azure.
+A guide for AI engineers building always-on agents with Microsoft Agent Framework, Microsoft Foundry, and Azure, based on Anthropic's always-on agent pattern.
 
 **Availability snapshot: November 16, 2026.** Based on linked Microsoft documentation and announcements. GA status, SDK maturity, regional availability, and model capacity are separate considerations.
 
@@ -51,13 +51,13 @@ This conceptual diagram shows the five primitives working together. Approval req
 
 ### A. Code-first: Agent Framework + Durable Functions
 
-**Best for teaching the architecture through a small code example.**
+**Best for custom agent logic and control over durable execution.**
 
 Microsoft Agent Framework supplies reasoning, tools, sessions, and tool-approval requests. Durable Functions supplies recoverable orchestration, timers, and waits for external events. The Durable Task extension can persist agent sessions, while Azure OpenAI supplies model inference.
 
-The application still owns inbox deduplication and batching, long-term memory policy, tool authorization, approval UX, and reliable outbound effects. This approach makes all five primitives visible instead of hiding them behind a managed service.
+The application owns inbox deduplication and batching, long-term memory policy, tool authorization, approval UX, and reliable outbound effects.
 
-Agent Framework can also run on Container Apps, App Service, or AKS. The Durable Task SDKs support bringing your own compute; adopting durable execution does not force Azure Functions hosting. This flexibility adds deployment choices, not a reason to provision more services for a small example.
+Agent Framework can also run on Container Apps, App Service, or AKS. The Durable Task SDKs support bringing your own compute, so Azure Functions hosting is optional.
 
 ### B. Foundry-native: prompt or hosted agents + routines
 
@@ -81,7 +81,7 @@ This is useful when Foundry routines are unavailable in the required region, inc
 
 **Logic Apps Standard Agent Loop** combines agent reasoning with integration workflows and enterprise connectors. **Copilot Studio autonomous agents** provide low-code, event-driven business agents.
 
-These are credible alternatives, but their feature-specific limits, identity, durable memory, approval behavior, and delivery guarantees still need review. In particular, Copilot Studio's documented event-trigger path uses maker credentials. A code-first reference is better suited to exposing the mechanics of all five primitives.
+Check feature-specific limits, identity, durable memory, approval behavior, and delivery guarantees. Copilot Studio's documented event-trigger path uses maker credentials.
 
 ## What is GA, and what is preview?
 
@@ -91,7 +91,7 @@ GA applies to a specific capability, not everything under a product brand. A GA 
 | --- | --- | --- |
 | Microsoft Agent Framework core | **1.0 GA**, April 2, 2026 ([announcement][maf-ga]). | Suitable foundation for a code-first agent. Check extensions independently. |
 | Durable Task extension for Agent Framework | **GA**, November 9, 2026 ([announcement][durable-agent-ga]). | Durable agents/workflows support .NET and Python, with Functions or self-hosted workers. |
-| Python Functions agent bindings | **Preview** ([quickstart][python-bindings]). | These are a separate integration from the GA Durable Task extension. Do not select them for a strict GA-only example. |
+| Python Functions agent bindings | **Preview** ([quickstart][python-bindings]). | These are a separate integration from the GA Durable Task extension. Exclude them from a GA-only implementation. |
 | Durable Task Scheduler: Dedicated | **GA**, November 18, 2025 ([release][dts-dedicated-ga]). | Fixed-capacity backend; compute hosting is billed separately. |
 | Durable Task Scheduler: Consumption | **GA**, May 4, 2026 ([release][dts-consumption-ga]). | Pay-per-action alternative; Dedicated is not required merely to avoid preview. |
 | Foundry Agent Service | **GA service** ([announcement][agent-service-ga], [current overview][foundry-overview]). | Does not imply that every agent type, tool, or SDK feature is GA. |
@@ -152,7 +152,7 @@ Keep model/network calls out of deterministic orchestration code. Recovery can r
 
 Do not require Foundry managed memory, the preview reminder tool, or preview Python agent bindings. Keep the model selectable rather than assume a specific model or provisioned capacity is available. Evaluate Scheduler Consumption versus Dedicated against cost and operational requirements, not only GA status.
 
-This is an independent educational reference, not production certification or an official support commitment. Recheck the linked sources before implementation or customer deployment.
+Recheck feature availability, support requirements, and regional constraints before deployment.
 
 [anthropic]: https://claude.com/resources/articles/building-always-on-agents
 [maf-ga]: https://devblogs.microsoft.com/agent-framework/microsoft-agent-framework-at-build-2026-announce/
