@@ -2,9 +2,7 @@
 
 Understanding Anthropic's always-on agent pattern and exploring how to implement it with Microsoft Agent Framework, Microsoft Foundry, and Azure.
 
-**Status: research and design only.** No runnable agent, tests, or deployment exist yet. The example scenario and final stack are still to be agreed.
-
-**Availability checked: November 16, 2026.** The status below is based on linked Microsoft documentation and announcements, not deployment testing. GA status, SDK maturity, regional availability, and model capacity are separate checks.
+**Availability snapshot: November 16, 2026.** Based on linked Microsoft documentation and announcements. GA status, SDK maturity, regional availability, and model capacity are separate considerations.
 
 ## Start with the article
 
@@ -47,7 +45,7 @@ flowchart LR
     User --> Inbox
 ```
 
-The diagram is conceptual, not a deployed architecture. Approval requests also need a user-facing delivery path. While a task waits for approval, its worker should be free to process other work.
+This conceptual diagram shows the five primitives working together. Approval requests also need a user-facing delivery path. While a task waits for approval, its worker should be free to process other work.
 
 ## Microsoft options
 
@@ -91,7 +89,7 @@ These are credible alternatives, but their feature-specific limits, identity, du
 
 GA applies to a specific capability, not everything under a product brand. A GA service can have preview tools or language integrations.
 
-| Capability | Verified status | Implication |
+| Capability | Documented status | Implication |
 | --- | --- | --- |
 | Microsoft Agent Framework core | **1.0 GA**, April 2, 2026 ([announcement][maf-ga]). | Suitable foundation for a code-first agent. Check extensions independently. |
 | Durable Task extension for Agent Framework | **GA**, November 9, 2026 ([announcement][durable-agent-ga]). | Durable agents/workflows support .NET and Python, with Functions or self-hosted workers. |
@@ -108,7 +106,7 @@ GA applies to a specific capability, not everything under a product brand. A GA 
 | Logic Apps Standard Agent Loop | **GA**, November 18, 2025 ([announcement][logic-ga]). | A credible integration-first option. Consumption agentic workflows and some advanced integrations remain preview ([documentation][logic-agents]). |
 | Copilot Studio autonomous agents | **GA**, March 2025 ([announcement][studio-ga]). | Event-driven low-code option; validate the specific harness, connectors, authentication, and environment policies ([limitations][studio-triggers]). |
 
-Package evidence: PyPI lists stable `1.0.0` releases of both [`agent-framework-durabletask`][pypi-durable] and [`agent-framework-azurefunctions`][pypi-functions], published November 9, 2026. They were inspected, **not installed or tested**. Some Learn installation examples still include prerelease flags; implementation must pin and validate a coherent stable dependency set rather than copy a preview example blindly.
+Stable `1.0.0` releases of both [`agent-framework-durabletask`][pypi-durable] and [`agent-framework-azurefunctions`][pypi-functions] were published November 9, 2026. Some Learn installation examples still include prerelease flags; pin and validate a coherent stable dependency set rather than copying a preview example blindly.
 
 ## Mapping the five primitives
 
@@ -134,7 +132,7 @@ See Microsoft's [Idempotent Consumer pattern][idempotency] and [Service Bus reli
 | Azure OpenAI Responses API | Listed as supported ([regions][responses]). | A particular model/version/deployment type and quota are not established by API availability. |
 | Foundry routines | **Not available** ([limitations][routines]). | Also excluded in UK West, Switzerland West, Japan West, and Norway East. Routines support VNet-secured projects but not customer-managed key encryption. |
 | Foundry managed memory | Listed as supported, but **preview** ([limitations][memory]). | Memory stores do not support VNet integration. |
-| Durable Task Scheduler | **Not verified against a target subscription** ([documentation][dts]). | Query the resource provider for current regional availability before selecting the backend. |
+| Durable Task Scheduler | Confirm through the resource provider ([documentation][dts]). | The documentation directs readers to query current regional availability before selecting the backend. |
 
 **Data residency:** a resource in UAE North does not guarantee UAE-only model processing. Global deployments may process elsewhere; select the deployment type against the required processing boundary ([deployment types][deployment-types]).
 
@@ -148,26 +146,13 @@ Additional Foundry routine constraints matter for a faithful implementation:
 
 Sources: [routines][routines] and [reminder tool][reminders].
 
-## Proposed direction, not a final decision
+## Choosing a GA-only architecture
 
-For an educational code sample, the leading option is **Microsoft Agent Framework + Durable Functions + Azure OpenAI**, with explicit inbox, memory, approval, and outbox behavior. The GA Durable Task extension is a candidate for session durability. Conventional agent calls inside durable activities are another option if the sample needs a more explicit implementation.
+**Microsoft Agent Framework + Durable Functions + Azure OpenAI** offers a code-first approach with explicit inbox, memory, approval, and outbox behavior. The GA Durable Task extension provides an option for session durability. Conventional agent calls inside durable activities are another option for a more explicit implementation.
 
 Keep model/network calls out of deterministic orchestration code. Recovery can reuse recorded results, but a crash between an external side effect and its checkpoint still requires idempotency. Configure waits so they release workers; that does not make storage, provisioned capacity, or every hosting plan free while idle.
 
 Do not require Foundry managed memory, the preview reminder tool, or preview Python agent bindings. Keep the model selectable rather than assume a specific model or provisioned capacity is available. Evaluate Scheduler Consumption versus Dedicated against cost and operational requirements, not only GA status.
-
-Next, agree one small scenario that demonstrates receiving an event, batching messages, scheduling a follow-up, waiting for approval, and reliably delivering an outcome. Then implement an offline mock-backed path before attempting live Azure integration.
-
-## What has actually been verified?
-
-| Check | Result |
-| --- | --- |
-| Anthropic pattern and Microsoft capability/status research | Reviewed the linked article, Microsoft documentation, and dated announcements. |
-| Durable extension Python release metadata | Stable package releases inspected on PyPI; no dependency installation or compatibility test. |
-| Example scenario and architecture selection | Pending discussion. |
-| Offline demo, unit tests, Functions host, and emulator | Not implemented or run. |
-| Azure resource availability, subscription quota, and cost | Not checked against a subscription. |
-| Live model call or Azure deployment | Not performed. |
 
 This is an independent educational reference, not production certification or an official support commitment. Recheck the linked sources before implementation or customer deployment.
 
