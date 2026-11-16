@@ -2,7 +2,7 @@
 
 Anthropic's excellent article, [Building always-on agents][anthropic] by William Hu, inspired this repository. Published on November 13, 2026, it explains how agents can respond to events, follow up on tasks, and maintain context across sessions.
 
-**This repository helps AI engineers build always-on agents with Microsoft AI solutions.** It maps the pattern to Microsoft Agent Framework, Microsoft Foundry, and Azure, compares implementation options, and highlights GA versus preview features and UAE North availability.
+**This repository helps AI engineers build always-on agents with Microsoft AI solutions.** It maps the pattern to [Microsoft Agent Framework](https://learn.microsoft.com/agent-framework/), [Microsoft Foundry](https://learn.microsoft.com/azure/foundry/), and [Azure](https://azure.microsoft.com/), compares implementation options, and highlights GA versus preview features and UAE North availability.
 
 ## What is an always-on agent?
 
