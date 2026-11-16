@@ -47,41 +47,24 @@ flowchart LR
 
 Start with one inbox per user and one active worker per inbox. Deliver approval requests through the user interface or outbox; the user's decision returns as an event. Waiting for approval should release the worker.
 
-## Choose an implementation approach
+## Choose how to build and run your agent
 
-### A. Code-first: Agent Framework + Durable Functions
+| You want to | Use | What you get |
+| --- | --- | --- |
+| Call a model directly and control the agent loop | [Azure OpenAI / Foundry model APIs][openai-v1] with a client SDK | Model inference and tool-call responses. Your application executes tools and manages the loop and state. |
+| Build an agent in your own application | [Microsoft Agent Framework](https://learn.microsoft.com/agent-framework/) | An SDK for the agent loop, tools, sessions, workflows, and approval requests. You choose where the application runs. |
+| Have Foundry run an agent defined through configuration | [Foundry prompt agents][foundry-overview] | A managed agent configured with instructions, a model, and tools, without deploying your own agent container. |
+| Have Foundry host your own agent code | [Foundry hosted agents][hosted] | A managed runtime for your agent container, with scaling, session persistence, and runtime isolation. You supply the agent code and framework. |
 
-**Best for custom agent logic and control over durable execution.**
+### Add always-on behavior
 
-Use **Microsoft Agent Framework** for the agent loop, tools, sessions, and approval requests. Use **Durable Functions** for recoverable orchestration, timers, and external-event waits, and **Azure OpenAI** for model inference. The Durable Task extension adds persistent agent sessions.
+The model API, SDK, or managed runtime is the starting point. Add the event, scheduling, and persistence behavior your application needs:
 
-You implement inbox deduplication and batching, memory policies, tool authorization, the approval interface, and reliable delivery.
+- **Durable Functions / Durable Task:** coordinate recoverable work, timers, and approval waits. The GA Durable Task extension adds persistent Agent Framework sessions. Workers can run in Functions or on other compute, such as Container Apps, App Service, or AKS.
+- **Foundry routines:** invoke prompt or hosted agents on schedules or supported events. The built-in self-reminder tool is hosted-agent only and remains preview; managed long-term memory is also preview.
+- **Application services:** implement inbox deduplication and batching, memory policies, tool authorization, the approval interface, and reliable outbound delivery.
 
-For other hosting requirements, Agent Framework and the Durable Task SDKs can run on **Container Apps, App Service, or AKS**.
-
-### B. Foundry-native: prompt or hosted agents + routines
-
-**Best for managed agent hosting and operations.**
-
-Choose **prompt agents** to configure instructions, models, and tools without managing agent hosting code. Choose **hosted agents** to run your own code in a managed runtime with persistent session files.
-
-**Routines** invoke agents on schedules or supported external events. You still design business-level deduplication, approvals, memory, and outbound delivery. The built-in self-reminder tool and managed long-term memory are **preview**.
-
-### C. Hybrid: Azure durability + a Foundry agent
-
-**Best for managed agents with explicit business-process control.**
-
-Use Azure services for the inbox, timers, approvals, and delivery. Invoke a Foundry agent for reasoning and tool use.
-
-This also works around regional gaps in Foundry routines. You need to coordinate session IDs, retries, task state, and completion across both runtimes.
-
-### D. Integration and low-code: Logic Apps or Copilot Studio
-
-**Best for connector-heavy business automation.**
-
-**Logic Apps Standard Agent Loop** combines agent reasoning with integration workflows and enterprise connectors. **Copilot Studio autonomous agents** provide low-code, event-driven business agents.
-
-Check connector limits, authentication, memory, approvals, and delivery behavior. Copilot Studio's documented event-trigger path uses maker credentials.
+You can combine Azure durable orchestration with a Foundry agent when you need more control over events, retries, and task progress. Keep session IDs and completion tracking consistent across both.
 
 ## What is GA, and what is preview?
 
@@ -101,8 +84,6 @@ Check connector limits, authentication, memory, approvals, and delivery behavior
 | Foundry managed memory / Memory Store API | **Public preview** ([documentation][memory]). | Optional managed long-term memory; not required to implement the pattern. |
 | Foundry workflow agents | **Preview** ([documentation][foundry-workflows]). | Distinct from Agent Framework workflows and Durable Functions orchestrations. |
 | Azure OpenAI v1 API | **GA API**, including the documented Responses API path ([API lifecycle][openai-v1]). | Select a supported GA model and features; not all capabilities exposed through v1 are GA. |
-| Logic Apps Standard Agent Loop | **GA**, November 18, 2025 ([announcement][logic-ga]). | A credible integration-first option. Consumption agentic workflows and some advanced integrations remain preview ([documentation][logic-agents]). |
-| Copilot Studio autonomous agents | **GA**, March 2025 ([announcement][studio-ga]). | Event-driven low-code option; validate the specific harness, connectors, authentication, and environment policies ([limitations][studio-triggers]). |
 
 The Python packages [`agent-framework-durabletask`][pypi-durable] and [`agent-framework-azurefunctions`][pypi-functions] have stable `1.0.0` releases. They are separate from the preview Python agent bindings. Pin compatible stable versions when building a GA-only solution.
 
@@ -113,10 +94,10 @@ Choose the services your application needs; you do not need every option below.
 | Building block | Microsoft options | Design consideration |
 | --- | --- | --- |
 | Inbox | Azure SQL or another durable database; Service Bus queues/sessions; Foundry routines for supported triggers. | Track event IDs and processing status. Broker deduplication does not prevent redelivery. |
-| Timers | Durable Functions timers, Durable Task SDKs, Foundry routines, or Logic Apps recurrence. | Associate each timer with its task/session. The Foundry self-reminder tool is preview. |
+| Timers | Durable Functions timers, Durable Task SDKs, or Foundry routines. | Associate each timer with its task/session. The Foundry self-reminder tool is preview. |
 | Memory | Azure SQL, Cosmos DB, Blob Storage, or hosted-agent persistent files. | Separate task state from long-term memory. Define scope, retention, and deletion. |
 | Permissions | Managed identity, Entra RBAC, Key Vault, controlled tool backends, and Agent Framework [tool approvals][approvals]. | Enforce authorization in code. Bind approval to the exact action and arguments. |
-| Outbox | A durable database outbox with a Functions or worker dispatcher; Service Bus or Logic Apps for delivery integrations. | Record outgoing work with the related state change. Make retries safe at the destination. |
+| Outbox | A durable database outbox with a Functions or worker dispatcher; optionally Service Bus for message transport. | Record outgoing work with the related state change. Make retries safe at the destination. |
 
 An outbox alone does not guarantee exactly-once delivery to an external system. See Microsoft's [Idempotent Consumer pattern][idempotency] and [Service Bus reliability guidance][servicebus].
 
@@ -179,10 +160,6 @@ Recheck feature availability, support requirements, and regional constraints bef
 [openai-v1]: https://learn.microsoft.com/azure/foundry/openai/api-version-lifecycle
 [responses]: https://learn.microsoft.com/azure/foundry/openai/how-to/responses
 [deployment-types]: https://learn.microsoft.com/azure/ai-foundry/openai/how-to/deployment-types
-[logic-ga]: https://techcommunity.microsoft.com/blog/integrationsonazureblog/%F0%9F%8E%89announcing-general-availability-of-agent-loop-in-azure-logic-apps/4470739
-[logic-agents]: https://learn.microsoft.com/azure/logic-apps/agent-workflows-concepts
-[studio-ga]: https://www.microsoft.com/en-us/copilot/blog/copilot-studio/whats-new-in-copilot-studio-march-2025/
-[studio-triggers]: https://learn.microsoft.com/microsoft-copilot-studio/authoring-triggers-about
 [approvals]: https://learn.microsoft.com/agent-framework/agents/tools/tool-approval
 [idempotency]: https://learn.microsoft.com/azure/architecture/patterns/idempotent-consumer
 [servicebus]: https://learn.microsoft.com/azure/well-architected/service-guides/azure-service-bus
