@@ -49,8 +49,6 @@ This conceptual diagram shows the five primitives working together. Approval req
 
 ## Microsoft options
 
-Foundry and Azure are not competing choices. Foundry provides models and managed agent capabilities on Azure; Azure services can supply the durable application infrastructure around them.
-
 ### A. Code-first: Agent Framework + Durable Functions
 
 **Best for teaching the architecture through a small code example.**
