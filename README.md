@@ -2,7 +2,7 @@
 
 Anthropic's excellent article, [Building always-on agents][anthropic] by William Hu, inspired this repository. Published on November 13, 2026, it explains how agents can respond to events, follow up on tasks, and maintain context across sessions.
 
-**This repository helps AI engineers build always-on agents with Microsoft AI solutions.** It maps the pattern to [Microsoft Agent Framework](https://learn.microsoft.com/agent-framework/), [Microsoft Foundry](https://learn.microsoft.com/azure/foundry/), and [Azure](https://azure.microsoft.com/), compares implementation options, and highlights GA versus preview features and UAE North availability.
+**This repository helps AI engineers build always-on agents with Microsoft AI solutions.** It maps the pattern to [Microsoft Agent Framework](https://learn.microsoft.com/agent-framework/), [Microsoft Foundry](https://learn.microsoft.com/azure/foundry/), and [Azure](https://azure.microsoft.com/), compares implementation options, and highlights GA versus preview features.
 
 ## What is an always-on agent?
 
@@ -73,7 +73,7 @@ Choose **prompt agents** to configure instructions, models, and tools without ma
 
 Use Azure services for the inbox, timers, approvals, and delivery. Invoke a Foundry agent for reasoning and tool use.
 
-This also works around regional gaps in Foundry routines, including UAE North. You need to coordinate session IDs, retries, task state, and completion across both runtimes.
+This also works around regional gaps in Foundry routines. You need to coordinate session IDs, retries, task state, and completion across both runtimes.
 
 ### D. Integration and low-code: Logic Apps or Copilot Studio
 
@@ -120,20 +120,6 @@ Choose the services your application needs; you do not need every option below.
 
 An outbox alone does not guarantee exactly-once delivery to an external system. See Microsoft's [Idempotent Consumer pattern][idempotency] and [Service Bus reliability guidance][servicebus].
 
-## UAE North availability
-
-**Snapshot: November 16, 2026.** Regional support does not establish subscription access, quota, or capacity.
-
-| Service or feature | UAE North status | Important constraint |
-| --- | --- | --- |
-| Foundry hosted agents | Listed as supported ([regions][hosted]). | Check the selected model, tools, and runtime features separately. |
-| Azure OpenAI Responses API | Listed as supported ([regions][responses]). | Check the model, version, deployment type, and quota separately. |
-| Foundry routines | **Not available** ([limitations][routines]). | Use Azure-managed scheduling and invocation instead. |
-| Foundry managed memory | Listed as supported, but **preview** ([limitations][memory]). | Memory stores do not support VNet integration. |
-| Durable Task Scheduler | Confirm through the resource provider ([documentation][dts]). | The documentation directs readers to query current regional availability before selecting the backend. |
-
-**Data residency:** a resource in UAE North does not guarantee UAE-only model processing. Global deployments may process elsewhere; select the deployment type against the required processing boundary ([deployment types][deployment-types]).
-
 ## Foundry routine constraints
 
 | Constraint | What it means |
@@ -159,6 +145,20 @@ For a code-first solution, **Microsoft Agent Framework + Durable Functions + Azu
 - Compare Scheduler Consumption and Dedicated costs. Sleeping agents can still incur storage and provisioned-capacity charges.
 
 Recheck feature availability, support requirements, and regional constraints before deployment.
+
+## UAE North availability
+
+**Snapshot: November 16, 2026.** Regional support does not establish subscription access, quota, or capacity.
+
+| Service or feature | UAE North status | Important constraint |
+| --- | --- | --- |
+| Foundry hosted agents | Listed as supported ([regions][hosted]). | Check the selected model, tools, and runtime features separately. |
+| Azure OpenAI Responses API | Listed as supported ([regions][responses]). | Check the model, version, deployment type, and quota separately. |
+| Foundry routines | **Not available** ([limitations][routines]). | Use Azure-managed scheduling and invocation instead. |
+| Foundry managed memory | Listed as supported, but **preview** ([limitations][memory]). | Memory stores do not support VNet integration. |
+| Durable Task Scheduler | Confirm through the resource provider ([documentation][dts]). | The documentation directs readers to query current regional availability before selecting the backend. |
+
+**Data residency:** a resource in UAE North does not guarantee UAE-only model processing. Global deployments may process elsewhere; select the deployment type against the required processing boundary ([deployment types][deployment-types]).
 
 [anthropic]: https://claude.com/resources/articles/building-always-on-agents
 [maf-ga]: https://devblogs.microsoft.com/agent-framework/microsoft-agent-framework-at-build-2026-announce/
