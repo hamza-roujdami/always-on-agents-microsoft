@@ -129,7 +129,7 @@ Recheck feature availability, support requirements, and regional constraints bef
 
 ## UAE North availability
 
-**Snapshot: November 16, 2026.** Regional support does not establish subscription access, quota, or capacity.
+**Snapshot: November 16, 2026; Scheduler availability updated November 17, 2026.** Regional support does not establish subscription access, quota, or capacity.
 
 | Service or feature | UAE North status | Important constraint |
 | --- | --- | --- |
@@ -137,7 +137,7 @@ Recheck feature availability, support requirements, and regional constraints bef
 | Azure OpenAI Responses API | Listed as supported ([regions][responses]). | Check the model, version, deployment type, and quota separately. |
 | Foundry routines | **Not available** ([limitations][routines]). | Use Azure-managed scheduling and invocation instead. |
 | Foundry managed memory | Listed as supported, but **preview** ([limitations][memory]). | Memory stores do not support VNet integration. |
-| Durable Task Scheduler | Confirm through the resource provider ([documentation][dts]). | The documentation directs readers to query current regional availability before selecting the backend. |
+| Durable Task Scheduler | **Available**; UAE North is listed by the `Microsoft.DurableTask` resource provider ([documentation][dts]). | Dedicated and Consumption are GA and support private endpoints. Confirm SKU-specific capacity and deployment requirements separately. |
 
 **Data residency:** a resource in UAE North does not guarantee UAE-only model processing. Global deployments may process elsewhere; select the deployment type against the required processing boundary ([deployment types][deployment-types]).
 
